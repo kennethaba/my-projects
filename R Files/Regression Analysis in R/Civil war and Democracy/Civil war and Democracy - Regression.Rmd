@@ -1,0 +1,335 @@
+---
+title: "MODEL SPECIFICATION IN R "
+author: "Kenneth Aba"
+date: "3/28/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Section head
+Install any packages 
+```{r}
+library(tidyverse)
+library(lmtest)
+
+```
+
+# Read in Data 
+
+```{r}
+
+Data_new <- read.csv("C:/Users/kenne/Documents/706/Problem_set_1.csv")
+```
+
+# Subset Variables 
+```{r}
+subdata9<-subset(Data_new,select=c( v2x_polyarchy, e_civil_war,demregion,e_migdppc,e_regionpol_6C, 
+                                                                                    country_id))
+
+```
+
+# Remove missings  #
+
+```{r}
+subdata_9<-drop_na(subdata9)
+```
+
+
+# Summarize sample 
+```{r}
+dim(subdata_9)
+```
+
+
+# Assign Variables 
+
+```{r}
+subdata_9$dem2<-c(subdata_9$v2x_polyarchy)^2
+```
+
+
+#  QUESTION 1  
+
+# Power transformations
+
+a. Using glm(), estimate a linear probability model regressing civil war (e civil war) on
+electoral democracy (v2x polyarchy) and save it as an object.
+
+
+# Model 
+
+```{r}
+
+model1<-glm(e_civil_war~v2x_polyarchy, data=subdata_9)#family=binomial(link="logit"))
+summary(model1)
+
+```
+
+b. Estimate the same model as 1a but include squared values of electoral democracy.
+
+# Model
+
+```{r}
+model2<-glm(e_civil_war~v2x_polyarchy+dem2, data=subdata_9) #, family=binomial(link="logit"))
+summary(model2)
+```
+
+
+# Generating predicted values 
+
+```{r}
+newdat<-data.frame(cbind("v2x_polyarchy"=c(seq(0,1,.001)),"dem2"=c
+                         (seq(0,1,.001))^2))
+
+pred1<-predict.glm(model1, newdata=newdat, type="response")
+pred2<-predict.glm(model2, newdata=newdat, type="response")
+```
+
+# Plotting predicted values
+
+```{r}
+
+plot(pred1~c(seq(0,1,.001)))
+points(pred2~c(seq(0,1,.001)))
+
+			newdat<-data.frame(cbind("v2x_polyarchy"=c(seq(-2,3,.001)), "dem2"=c
+			                         (seq(-2,3,.001))^2))
+			pred1<-predict.glm(model1, newdata=newdat, type="response")
+			pred2<-predict.glm(model2, newdata=newdat, type="response")
+			plot(pred1~c(seq(-2,3,.001)), type="l")
+			lines(pred2~c(seq(-2,3,.001)))
+			abline(v=c(0,1), lty=2)
+			
+			
+			lmtest::lrtest(model1,model2)
+```
+
+
+# QUESTION 1c. 
+Interpret the models or plot the difference in predicted values across levels of
+electoral democracy. Is the relationship between electoral democracy and civil war
+linear?   
+
+Model 1 expresses the relationship between civil war and Democracy as linear. The result of the model shows that for every 1 unit increase in Polyarchy, the probability of civil war goes down by 0.12. 
+
+Model 2: When you add the squared term, the plot becomes curvy.  The result of the model shows that When you account for the squared term, the probability of civil war goes down by 0.18. Adding polynomials decreased the AIC score a little bit and increased the logged likely ratio, however, the difference is neither significant enough for me to care about it nor does it justify my adding a different variable(squared term). Thus, I think the true relationship should be represented linearly, instead of quadratically. 
+
+
+
+#  QUESTION 2 ## Interaction terms
+
+ Using glm(), estimate a linear probability model regressing civil war (e civil war) on
+electoral democracy (v2x polyarchy) and regional democracy (demregion) save it as an
+object.
+
+# Model 
+
+```{r}
+model3<-glm(e_civil_war~v2x_polyarchy+demregion, data=subdata_9)#family=binomial(link="logit"))
+summary(model3)
+```
+#Model  
+
+Estimate the same model as 2a but interact electoral democracy with regional
+democracy.
+
+```{r}
+model4 <- glm(e_civil_war~v2x_polyarchy*demregion, data = subdata_9) #family=binomial(link="logit"))
+summary(model4)
+```
+# Generating Predicted Values 
+
+```{r}
+#All the values of Polyarchy when Demregion is 0
+newdat1<-data.frame(cbind("v2x_polyarchy"=c(seq(0,1,.005)),"demregion"=c(rep(0,times=length(
+  seq(0,1,.005)))))) 
+#All the values of Polyarchy when Demregion is 1
+newdat2<-data.frame(cbind("v2x_polyarchy"=c(seq(0,1,.005)),"demregion"=c(rep(1,times=length(
+  seq(0,1,.005))))))
+
+pred3a<-predict.glm(model3, newdata=newdat1, type="response")
+pred3b<-predict.glm(model3, newdata=newdat2, type="response")
+pred4a<-predict.glm(model4, newdata=newdat1, type="response")
+pred4b<-predict.glm(model4, newdata=newdat2, type="response")
+
+```
+
+# Plotting Predicted Values 
+```{r}
+plot(pred3a~c(seq(0,1,.005)), type="l", ylim=c(-.04, .2))
+lines(pred3b~c(seq(0,1,.005)), type="l")
+lines(pred4a~c(seq(0,1,.005)), col="red")
+lines(pred4b~c(seq(0,1,.005)), col="red")
+
+lmtest::lrtest(model3,model4)
+
+```
+
+# Question 2C 
+Interpret the models or plot the difference in predicted values across levels of
+electoral democracy. Do electoral democracy and regional democracy interact to
+affect civil war likelihood?
+
+# Interpreting the model:
+
+The first thing I noticed is the size of the coefficents. The coefficents get better when you add the interactive term. 
+
+The first model shows that without considering the interactive term, if you are a democracy, you are less likely to experience civil wars. Controlling for your level of democracy,being in a more democratic region increases the probability of your experiencing civil wars.  
+
+What happens when you add the interactive term? Being more democratic in a perfectly autocratic region reduces the probability of my experiencing civil wars. However, If I become more democratic in a perfectly democratic region, i would expect the probability of my experiencing civil conflict to reduce even further. This means that there is an interaction between how democratic my neigbors are and how democratic I am. 
+
+#Model Fit
+The AIC scores of the two models show that the model that includes the interactive term better explains the relationship between the Dependent and Independent variables. 
+
+
+#  QUESTION 3 : Time dependence
+
+```{r}
+subdata_9<-subdata_9%>%group_by(country_id)%>%mutate(lcw=lag(e_civil_war))
+model5<-glm(e_civil_war~v2x_polyarchy, data=subdata_9)#family=binomial(link="logit"))
+
+summary(model5)
+
+```
+
+```{r}
+model6<-glm(e_civil_war~v2x_polyarchy+lcw, data=subdata_9) #, family=binomial(link="logit"))
+summary(model6)
+
+```
+# Generating Predicted Values 
+```{r}
+newdat1<-data.frame(cbind("v2x_polyarchy"=c(seq(0,1,.005)), "lcw"=c(rep(0, times=length(
+  seq(0,1,.005))))))
+newdat2<-data.frame(cbind("v2x_polyarchy"=c(seq(0,1,.005)), "lcw"=c(rep(1, times=length(
+  seq(0,1,.005))))))
+
+pred5<-predict.glm(model5, newdata=newdat1, type="response")
+pred6a<-predict.glm(model6, newdata=newdat1, type="response")
+pred6b<-predict.glm(model6, newdata=newdat2, type="response")
+```
+
+```{r}
+plot( pred5~c(seq(0,1,.005)), type="l", ylim=c(-.1,1), col="red")
+lines(pred6a~c(seq(0,1,.005)))
+lines(pred6b~c(seq(0,1,.005)))
+
+```
+
+# Model Fit 
+```{r}
+model6<-glm(e_civil_war~v2x_polyarchy+lcw, data=subdata_9) #family=binomial(link="logit"))
+model5b<-glm(e_civil_war~v2x_polyarchy, data=subdata_9[names(model6$residuals),])#family=binomial(link="logit"))
+
+
+#lmtest 
+lmtest::lrtest(model5b,model6)
+
+
+```
+
+
+# QUESTION 3C
+c. Interpret the models or plot the difference in predicted values across levels of
+electoral democracy. Does it matter whether a country was experiencing civil war in
+the previous year?
+
+# Interpretation:What happens when I add Lagged values of the Dependent Variable? 
+
+When I added the previous values of civil war, I see that there is a huge impact on the results of the model. This means that though Polyarchy is negatively associated with Civil war, when I consider whether the country in question experienced civil war previously, I get a coefficent of over 76%. (the probability of civil war for that country increases by 76%).
+
+# Model Fit" 
+The AIC score shows that this model does a better job of explaining civil wars because it shows us that we cannot properly account for the likelihood of civil war withough considering time dependence. 
+
+
+
+# QUESTION 4# Fixed effects
+a. Using glm(), estimate a linear probability model regressing civil war (e civil war) on
+electoral democracy (v2x polyarchy) and save it as an object.
+
+
+# Model 
+
+```{r}
+model7<-glm(e_civil_war~v2x_polyarchy, data=subdata_9) #family=binomial(link="logit"))
+summary(model7)
+```
+
+# QUESTION4b
+
+Estimate the same model as 4a but include country fixed effects using
+factor(country id).
+
+# Model
+
+```{r}
+
+model8<-glm(e_civil_war~factor(country_id)+v2x_polyarchy, data=subdata_9) #family=binomial(link="logit"))
+
+summary(model8)
+
+#Lmtest
+
+lmtest::lrtest(model7,model8)
+```
+
+
+# QUESTION 4c. 
+
+#Interprete the estimate associated with electoral democracy for both models. What is the effect of including country dummies?
+
+
+Adding country dummies accounts for specific differences associated with countries that I may not be accounting for. The results show that considering aspects associated with countries that we didn't specially build into our model,  improves the likelihood of observing what we have in our sample. 
+
+ 
+ # Model fit:  
+Compared to the first, the AIC score for this model(Model8) shows that the model better explains the relationship between the Dependent and Independent variables. 
+The log Likelihood ratio test shows the huge impact of adding country fixed effects to the model. 
+ 
+
+#  QUESTION 5. 
+
+Based on the AICs or log-likelihoods of the models estimated for questions 1 through 4,
+which is the best-fitting model?
+What would the most appropriate model specification include
+(polynomials, interaction terms, lagged values, and/or fixed effects)?
+
+# Model-fit 
+We have already seen that adding a squared term for polyarchy doesn't really matter. However, adding Interaction, considering time dependence(of the Dependent variable) and country fixed effect do matter. Thus, considering the AIC scores and the logged likelihood ratios, I think the best-fitting model is one that includes the interactive term, lagged dependent variable, country fixed effect.  
+
+
+
+```{r}
+
+##### Which model is the best?
+
+model1$aic
+model2$aic
+model3$aic
+model4$aic
+model5$aic
+model6$aic
+model7$aic
+model8$aic
+
+
+#Trying different models 
+
+model9<-glm(e_civil_war~v2x_polyarchy*demregion+dem2+lcw, data=subdata_9)#family=binomial(link="logit"))
+model10<-glm(e_civil_war~factor(country_id)+v2x_polyarchy*demregion+dem2+lcw, data=subdata_9)#family=binomial(link="logit"))
+
+model9$aic
+model10$aic
+
+model11<-glm(e_civil_war~factor(country_id)+v2x_polyarchy*demregion+lcw, data=subdata_9)#family=binomial(link="logit"))
+
+model11$aic
+
+lmtest::lrtest(model10,model11)
+
+
+```
